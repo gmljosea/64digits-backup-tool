@@ -77,7 +77,10 @@ def pull_blogs(session):
 
     os.makedirs("blogs", exist_ok=True)
 
-    for url in blog_urls:
+    blog_count = len(blog_urls)
+    print("Backing up %d blogs" % blog_count)
+
+    for num, url in enumerate(blog_urls):
 
         blog_id = re.search(r"id=(\d+)$", url).group(1)
         url = "http://64digits.com/users/" + url
@@ -103,7 +106,8 @@ def pull_blogs(session):
         if title is None:
             print(url)
 
-        filename = "%s.html" % title.replace("/", '').replace("\\", '')
+        blog_number = "%04d " % (blog_count-num)
+        filename = blog_number + "%s.html" % title.replace("/", '').replace("\\", '')
         with open(os.path.join("blogs", filename), mode="w") as f:
             f.write(blog.text)
 
