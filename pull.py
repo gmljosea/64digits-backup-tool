@@ -26,6 +26,7 @@ import datetime
 import json
 import os
 import re
+import argparse
 
 import pyquery
 import requests
@@ -76,7 +77,10 @@ def pull_blogs(session):
 
     os.makedirs("blogs", exist_ok=True)
 
-    for url in blog_urls:
+    blog_count = len(blog_urls)
+    print("Backing up %d blogs" % blog_count)
+
+    for num, url in enumerate(blog_urls):
 
         blog_id = re.search(r"id=(\d+)$", url).group(1)
         url = "http://64digits.com/users/" + url
@@ -102,7 +106,8 @@ def pull_blogs(session):
         if title is None:
             print(url)
 
-        filename = "%s.html" % title.replace("/", '').replace("\\", '')
+        blog_number = "%04d " % (blog_count-num)
+        filename = blog_number + "%s.html" % title.replace("/", '').replace("\\", '')
         with open(os.path.join("blogs", filename), mode="w") as f:
             f.write(blog.text)
 
@@ -132,11 +137,14 @@ def backup_filemanager(session):
         os.utime(file_path, times=(date, date))
 
 
-def main():
+def main(args):
     session = authenticated_session()
     pull_blogs(session)
-    backup_filemanager(session)
+    if not args.skip_files:
+        backup_filemanager(session)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Backup 64Digits user blogs and files.')
+    parser.add_argument('-s', '--skip-files', action="store_true", help="don't backup filemanager contents")
+    main(parser.parse_args())
