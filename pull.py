@@ -26,6 +26,7 @@ import datetime
 import json
 import os
 import re
+import argparse
 
 import pyquery
 import requests
@@ -132,11 +133,14 @@ def backup_filemanager(session):
         os.utime(file_path, times=(date, date))
 
 
-def main():
+def main(args):
     session = authenticated_session()
     pull_blogs(session)
-    backup_filemanager(session)
+    if not args.skip_files:
+        backup_filemanager(session)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Backup 64Digits user blogs and files.')
+    parser.add_argument('-s', '--skip-files', action="store_true", help="don't backup filemanager contents")
+    main(parser.parse_args())
