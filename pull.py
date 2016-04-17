@@ -70,7 +70,8 @@ def pull_blogs(session):
             pq(".blog_wrapper a.fntblue.fnt12,fntbold")
         ))
 
-        if pq(".lnkdec")[-1].text_content().strip() == "Next Page":
+        lnks = pq(".lnkdec")
+        if len(lnks) > 0 and lnks[-1].text_content().strip() == "Next Page":
             page_number += 1
         else:
             break
@@ -92,7 +93,9 @@ def pull_blogs(session):
 
         title, date = pq(".blog_wrapper > div:first > div:first > span")[:2]
         title = title.text_content().strip()
-        date = datetime.datetime.strptime(date.text_content().strip(), DATE_FORMAT).isoformat()
+        date = datetime.datetime.strptime(date.text_content().strip(), DATE_FORMAT)
+        int_date = date.timestamp()
+        date = date.isoformat()
         content = pyquery.PyQuery(pq(".blog_wrapper > div:first > div")[1]).html()
 
         blogs.append({
@@ -107,9 +110,11 @@ def pull_blogs(session):
             print(url)
 
         blog_number = "%04d " % (blog_count-num)
-        filename = blog_number + "%s.html" % title.replace("/", '').replace("\\", '')
-        with open(os.path.join("blogs", filename), mode="w") as f:
+        filename = blog_number + "%s.html" % re.sub(r'[/\\?%*:|"<>.]', r'_', title)
+        file_path = os.path.join("blogs", filename)
+        with open(file_path, mode="w") as f:
             f.write(blog.text)
+        os.utime(file_path, times=(int_date, int_date))
 
     with open("blogs.json", mode="w") as f:
         json.dump(blogs, f, indent=2)
@@ -129,7 +134,7 @@ def backup_filemanager(session):
         url = url.get("href")
         print("Backing up file", url)
         date = datetime.datetime.strptime(date, FILEMAN_DATE).timestamp()
-        filename = re.search(".*/(.*)", url).group(1)
+        filename = re.sub(r'[/\\?%*:|"<>.]', r'_', re.search(".*/(.*)", url).group(1))
         r = session.get(url)
         file_path = os.path.join("files", filename)
         with open(file_path, mode="wb") as f:
