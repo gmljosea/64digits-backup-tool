@@ -47,7 +47,7 @@ def authenticated_session():
         "username": USERNAME,
         "password": PASSWORD
     }
-    s.post("http://www.64digits.com/index.php", data=auth)
+    t = s.post("https://www.64digits.com/index.php", data=auth)
     return s
 
 
@@ -59,7 +59,7 @@ def pull_blogs(session):
         print("Pulling page ", page_number)
 
         page = session.get(
-            "http://64digits.com/users/index.php",
+            "https://64digits.com/users/index.php",
             params={"userid": USERNAME, "page": page_number}
         )
         pq = pyquery.PyQuery(page.text)
@@ -84,7 +84,7 @@ def pull_blogs(session):
     for num, url in enumerate(blog_urls):
 
         blog_id = re.search(r"id=(\d+)$", url).group(1)
-        url = "http://64digits.com/users/" + url
+        url = "https://64digits.com/users/" + url
 
         print("Processing blog at", url)
         blog = session.get(url)
@@ -112,7 +112,7 @@ def pull_blogs(session):
         blog_number = "%04d " % (blog_count-num)
         filename = blog_number + "%s.html" % re.sub(r'[/\\?%*:|"<>.]', r'_', title)
         file_path = os.path.join("blogs", filename)
-        with open(file_path, mode="w") as f:
+        with open(file_path, mode="w", encoding='utf-8-sig') as f:
             f.write(blog.text)
         os.utime(file_path, times=(int_date, int_date))
 
@@ -123,7 +123,7 @@ def pull_blogs(session):
 def backup_filemanager(session):
     os.makedirs("files", exist_ok=True)
     fileman = session.get(
-        "http://www.64digits.com/users/index.php",
+        "https://www.64digits.com/users/index.php",
         params={"userid": USERNAME, "cmd": "file_manager"}
     )
     pq = pyquery.PyQuery(fileman.text)
@@ -134,7 +134,7 @@ def backup_filemanager(session):
         url = url.get("href")
         print("Backing up file", url)
         date = datetime.datetime.strptime(date, FILEMAN_DATE).timestamp()
-        filename = re.sub(r'[/\\?%*:|"<>.]', r'_', re.search(".*/(.*)", url).group(1))
+        filename = re.sub(r'[/\\?%*:|"<>]', r'_', re.search(".*/(.*)", url).group(1))
         r = session.get(url)
         file_path = os.path.join("files", filename)
         with open(file_path, mode="wb") as f:
@@ -144,7 +144,8 @@ def backup_filemanager(session):
 
 def main(args):
     session = authenticated_session()
-    pull_blogs(session)
+    if not args.skip_blogs:
+        pull_blogs(session)
     if not args.skip_files:
         backup_filemanager(session)
 
@@ -152,4 +153,5 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Backup 64Digits user blogs and files.')
     parser.add_argument('-s', '--skip-files', action="store_true", help="don't backup filemanager contents")
+    parser.add_argument('-sb', '--skip-blogs', action="store_true", help="don't backup blogs")
     main(parser.parse_args())
